@@ -21,11 +21,12 @@ For the last decade, web development pushed business logic into giant JavaScript
 
 ```mermaid
 flowchart LR
-    Client["<b>Client Browser</b><br/>(Dumb Viewport + HTMX)<br/><code>hx-sync='this:queue'</code>"]
-    <-->|"Compressed Cookie<br/><code>v2_ (zlib + base64url)</code>"|
+    Client["<b>Client Browser</b><br/>(Dumb Viewport + HTMX)<br/>hx-sync='this:queue'"]
     Worker["<b>Ephemeral Worker</b><br/>FastAPI / Axum<br/>(Stateless • Zero DB Writes)"]
-    -->|"Read-Only Index<br/>(FTS5 / .rodata)"|
     Catalog[("<b>Baked Catalog</b><br/>Zero Locks • Read-Only")]
+
+    Client <-->|"Compressed Cookie<br/>v2_ (zlib + base64url)"| Worker
+    Worker -->|"Read-Only Index<br/>(FTS5 / .rodata)"| Catalog
 ```
 
 1. **The Browser is Just a Viewport:** No heavy frontend framework. The browser renders clean HTML partials via **HTMX** and swaps them into the DOM.
@@ -41,19 +42,21 @@ flowchart LR
 ```mermaid
 flowchart TD
     subgraph Phase1["🚀 Phase 1: Describe & Deploy on FastAPI Cloud"]
-        A["1. Describe all logic via FastAPI endpoints<br/>(Read-only SQLite FTS5 + Jinja2 partials + HTMX)"]
-        --> B["2. Store user mutations in compressed cookies<br/>(v2_ zlib + base64url + hx-sync concurrency)"]
-        --> C["3. Scaffold Edge CDN shell (dist/)<br/>(app.frontend('/', directory=DIST_DIR))"]
-        --> D["4. Run 'fastapi deploy' ➔ Live Web App!<br/>(Zero Redis/Postgres bills, Edge CDN cached, instant paint)"]
+        A["1. Describe logic via FastAPI endpoints<br/>(Read-only SQLite FTS5 + Jinja2 partials + HTMX)"]
+        B["2. Store user mutations in compressed cookies<br/>(v2_ zlib + base64url + hx-sync concurrency)"]
+        C["3. Scaffold Edge CDN shell (dist/)<br/>(app.frontend('/', directory=DIST_DIR))"]
+        D["4. Run 'fastapi deploy' ➔ Live Web App!<br/>(Zero Redis/Postgres bills, Edge CDN cached)"]
+        A --> B --> C --> D
     end
 
     subgraph Phase2["⚡ Phase 2: fastapi2axum Single Binary (When Needed)"]
         E["5. Translate routes 1-to-1 to Axum<br/>(Exact same extractors & v2_ cookie format)"]
-        --> F["6. Bake catalog directly into .rodata<br/>(Zero runtime DB, zero allocation)"]
-        --> G["7. 'cargo build --release' ➔ 1.1 MB Binary!<br/>(100% offline, microsecond latency, zero runtime deps)"]
+        F["6. Bake catalog directly into .rodata<br/>(Zero runtime DB, zero allocation)"]
+        G["7. 'cargo build --release' ➔ 1.1 MB Binary!<br/>(100% offline, microsecond latency)"]
+        E --> F --> G
     end
 
-    Phase1 -->|"Optional: Need offline companion or tiny binary"| Phase2
+    D -->|"Optional: Need offline companion or tiny binary"| E
 ```
 
 ### 🚀 Phase 1: Describe & Deploy on FastAPI Cloud
