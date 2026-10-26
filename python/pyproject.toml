@@ -1,0 +1,16 @@
+[project]
+name = "thin-viewport-boilerplate"
+version = "0.1.0"
+description = "FastAPI + HTMX reference implementation of the Thin Viewport & Stateless Cookie Architecture"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn>=0.30.0",
+    "jinja2>=3.1.4",
+    "python-multipart>=0.0.9",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

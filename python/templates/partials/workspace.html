@@ -1,0 +1,141 @@
+<!-- workspace.html: Dynamic HTMX Workspace Partial -->
+<div class="space-y-6">
+
+  <!-- Conflict Alert Banner -->
+  {% if plan.conflicts %}
+  <div class="p-4 rounded-xl border border-red-500/40 bg-red-950/30 text-red-200 space-y-3 shadow-lg">
+    <div class="flex items-center gap-2 font-semibold text-sm text-red-400">
+      <span class="text-base">⚠️</span> Mutual Exclusivity Conflict Detected
+    </div>
+    {% for conf in plan.conflicts %}
+    <div class="text-xs space-y-2 border-t border-red-900/50 pt-2">
+      <p class="text-zinc-300 font-medium">{{ conf.reason }}</p>
+      <div class="flex flex-wrap gap-2 items-center">
+        <span class="text-zinc-500 text-xs">Resolve choice:</span>
+        <form hx-post="/policy/resolve-conflict" hx-target="#workspace" hx-swap="innerHTML" class="inline">
+          <input type="hidden" name="keep_id" value="{{ conf.policies[0].policy_id }}">
+          <input type="hidden" name="remove_id" value="{{ conf.policies[1].policy_id }}">
+          <button type="submit" class="px-2.5 py-1 rounded bg-red-900/40 border border-red-700/60 hover:bg-red-800/60 text-red-100 text-xs transition">
+            Keep {{ conf.policies[0].name }}
+          </button>
+        </form>
+        <span class="text-zinc-600">vs</span>
+        <form hx-post="/policy/resolve-conflict" hx-target="#workspace" hx-swap="innerHTML" class="inline">
+          <input type="hidden" name="keep_id" value="{{ conf.policies[1].policy_id }}">
+          <input type="hidden" name="remove_id" value="{{ conf.policies[0].policy_id }}">
+          <button type="submit" class="px-2.5 py-1 rounded bg-red-900/40 border border-red-700/60 hover:bg-red-800/60 text-red-100 text-xs transition">
+            Keep {{ conf.policies[1].name }}
+          </button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Stats Grid -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+    <div class="p-3.5 rounded-xl border border-zinc-800/80 bg-zinc-900/40">
+      <div class="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Active Policies</div>
+      <div class="text-2xl font-bold text-zinc-100 mt-1">{{ plan.total_active }} <span class="text-xs text-zinc-500 font-normal">/ {{ plan.total_catalog }}</span></div>
+    </div>
+    <div class="p-3.5 rounded-xl border border-zinc-800/80 bg-zinc-900/40">
+      <div class="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Categories</div>
+      <div class="text-2xl font-bold text-zinc-100 mt-1">{{ plan.categories.keys() | length }}</div>
+    </div>
+    <div class="p-3.5 rounded-xl border {% if plan.missing_prereqs_count > 0 %}border-amber-500/40 bg-amber-950/20{% else %}border-zinc-800/80 bg-zinc-900/40{% endif %}">
+      <div class="text-xs {% if plan.missing_prereqs_count > 0 %}text-amber-400{% else %}text-zinc-500{% endif %} uppercase tracking-wider font-semibold">Prereq Warnings</div>
+      <div class="text-2xl font-bold {% if plan.missing_prereqs_count > 0 %}text-amber-300{% else %}text-zinc-100{% endif %} mt-1">{{ plan.missing_prereqs_count }}</div>
+    </div>
+    <div class="p-3.5 rounded-xl border {% if plan.conflicts %}border-red-500/40 bg-red-950/20{% else %}border-zinc-800/80 bg-zinc-900/40{% endif %}">
+      <div class="text-xs {% if plan.conflicts %}text-red-400{% else %}text-zinc-500{% endif %} uppercase tracking-wider font-semibold">Collisions</div>
+      <div class="text-2xl font-bold {% if plan.conflicts %}text-red-400{% else %}text-zinc-100{% endif %} mt-1">{{ plan.conflicts | length }}</div>
+    </div>
+  </div>
+
+  <!-- Active Policies by Category -->
+  {% if plan.categories %}
+  <div class="space-y-4">
+    <div class="flex items-center justify-between">
+      <h2 class="text-sm font-semibold uppercase tracking-wider text-zinc-400">Configured Policy Rules</h2>
+      <form hx-post="/policy/clear" hx-target="#workspace" hx-swap="innerHTML" hx-confirm="Clear all active policies?">
+        <button type="submit" class="text-xs text-zinc-500 hover:text-red-400 transition">Reset All</button>
+      </form>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {% for cat_name, items in plan.categories.items() %}
+      <div class="p-4 rounded-xl border border-zinc-800/80 bg-zinc-900/30 space-y-3">
+        <div class="flex items-center justify-between border-b border-zinc-800/50 pb-2">
+          <span class="text-xs font-bold text-amber-400 uppercase tracking-wider">{{ cat_name }}</span>
+          <span class="text-xs text-zinc-500">{{ items | length }} rules</span>
+        </div>
+
+        <div class="space-y-2">
+          {% for item in items %}
+          <div class="p-2.5 rounded-lg border border-zinc-800 bg-zinc-900/60 flex items-start justify-between gap-3 text-xs">
+            <div class="space-y-1 flex-1">
+              <div class="flex items-center gap-2">
+                <span class="font-semibold text-zinc-200">{{ item.name }}</span>
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-mono
+                  {% if item.severity == 'Critical' %}bg-red-950 text-red-400 border border-red-800/50
+                  {% elif item.severity == 'High' %}bg-amber-950 text-amber-400 border border-amber-800/50
+                  {% else %}bg-zinc-800 text-zinc-400{% endif %}">
+                  {{ item.severity }}
+                </span>
+              </div>
+              <p class="text-zinc-500 text-[11px] leading-relaxed">{{ item.description }}</p>
+
+              {% if item.has_missing_prereqs %}
+              <div class="mt-1 text-[11px] text-amber-400 flex items-center gap-1 font-medium">
+                <span>⚠️ Missing Prereq:</span> {{ item.missing_prereq_names | join(", ") }}
+              </div>
+              {% endif %}
+            </div>
+
+            <form hx-post="/policy/remove" hx-target="#workspace" hx-swap="innerHTML">
+              <input type="hidden" name="policy_id" value="{{ item.policy_id }}">
+              <button type="submit" class="text-zinc-600 hover:text-red-400 text-sm font-bold px-1 transition" title="Remove policy">×</button>
+            </form>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Compiled Manifest Preview -->
+  <div class="p-4 rounded-xl border border-zinc-800/80 bg-zinc-900/40 space-y-2">
+    <div class="flex items-center justify-between">
+      <span class="text-xs font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-2">
+        <span>📄</span> Compiled Deployment Manifest (YAML)
+      </span>
+      <button onclick="navigator.clipboard.writeText(document.getElementById('compiled-yaml-code').innerText); this.innerText='Copied!';"
+              class="text-xs text-amber-400 hover:underline">
+        Copy Manifest
+      </button>
+    </div>
+    <pre class="p-3 rounded-lg bg-zinc-950 border border-zinc-800/80 text-[11px] font-mono text-zinc-300 overflow-x-auto max-h-72"><code id="compiled-yaml-code">{{ plan.compiled_yaml }}</code></pre>
+  </div>
+
+  {% else %}
+  <!-- Empty State -->
+  <div class="text-center py-16 px-4 border border-dashed border-zinc-800 rounded-2xl bg-zinc-900/10 space-y-3">
+    <div class="text-3xl">🛡️</div>
+    <h3 class="text-sm font-bold text-zinc-200">No Policies Configured Yet</h3>
+    <p class="text-xs text-zinc-500 max-w-sm mx-auto">
+      Use the search bar above to query rules from the catalog. Changes are saved instantly into compressed HTTP-only cookies.
+    </p>
+    <div class="pt-2 flex justify-center gap-2">
+      <form hx-post="/policy/toggle" hx-target="#workspace" hx-swap="innerHTML" class="inline">
+        <input type="hidden" name="policy_id" value="POL-NET-02">
+        <button type="submit" class="text-xs px-3 py-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 font-medium transition">
+          + Add Quick Sample (Strict TLS 1.3)
+        </button>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
