@@ -185,3 +185,10 @@ async def import_snapshot(request: Request, file: UploadFile = File(...)):
         return render_workspace_response(request, imported_policies, refresh_search=True)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to import policy snapshot: {str(e)}")
+
+
+# Low-priority static frontend routes with Cloudflare Edge CDN caching on FastAPI Cloud
+if hasattr(app, "frontend") and DIST_DIR.exists():
+    app.frontend("/", directory=DIST_DIR)
+elif DIST_DIR.exists():
+    app.mount("/", StaticFiles(directory=str(DIST_DIR), html=True), name="frontend")

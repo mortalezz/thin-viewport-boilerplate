@@ -36,6 +36,41 @@ flowchart LR
 
 ---
 
+## 🗺️ The Two-Phase Developer Workflow
+
+```mermaid
+flowchart TD
+    subgraph Phase1["🚀 Phase 1: Describe & Deploy on FastAPI Cloud"]
+        A["1. Describe all logic via FastAPI endpoints<br/>(Read-only SQLite FTS5 + Jinja2 partials + HTMX)"]
+        --> B["2. Store user mutations in compressed cookies<br/>(v2_ zlib + base64url + hx-sync concurrency)"]
+        --> C["3. Scaffold Edge CDN shell (dist/)<br/>(app.frontend('/', directory=DIST_DIR))"]
+        --> D["4. Run 'fastapi deploy' ➔ Live Web App!<br/>(Zero Redis/Postgres bills, Edge CDN cached, instant paint)"]
+    end
+
+    subgraph Phase2["⚡ Phase 2: fastapi2axum Single Binary (When Needed)"]
+        E["5. Translate routes 1-to-1 to Axum<br/>(Exact same extractors & v2_ cookie format)"]
+        --> F["6. Bake catalog directly into .rodata<br/>(Zero runtime DB, zero allocation)"]
+        --> G["7. 'cargo build --release' ➔ 1.1 MB Binary!<br/>(100% offline, microsecond latency, zero runtime deps)"]
+    end
+
+    Phase1 -->|"Optional: Need offline companion or tiny binary"| Phase2
+```
+
+### 🚀 Phase 1: Describe & Deploy on FastAPI Cloud
+1. **Describe all logic via FastAPI endpoints:** Build your app using standard Python functions, Jinja2 partials, and HTMX. No React build step, no client-side state managers.
+2. **Stateless Compressed Cookies (`v2_`):** User state lives in compressed HTTP-only cookies. Any ephemeral FastAPI Cloud container can wake up cold and serve requests with zero server-side database lookups.
+3. **Scaffold for FastAPI Cloud:** Serve the static shell from Edge CDN (`app.frontend("/", directory=DIST_DIR)`) with local bundled HTMX and precompiled CSS.
+4. **Deploy & Enjoy:** Run `fastapi deploy` and get an instant, globally distributed, zero-maintenance web app.
+
+### ⚡ Phase 2: `fastapi2axum` ➔ Single-Binary Offline App *(When Needed)*
+Need to ship an offline desktop tool, a second-screen gaming companion, or a microsecond edge worker without forcing users to install Python or Docker?
+1. **1-to-1 Translation:** Map your FastAPI endpoints to Axum handlers using our [side-by-side translation cheat sheet](#-the-fastapi--axum-conversion-playbook).
+2. **Compile to Standalone Binary:** Run `cargo build --release` to produce a single **1.1 MB** binary.
+3. **Microsecond Performance:** Achieves **6.85 µs** request latency (`146,000 req/s`) with zero external database processes.
+4. **Complete Interoperability:** Because both phases share the exact same `v2_` cookie codec and JSON export format, users can effortlessly sync between the Phase 1 web app and Phase 2 offline app!
+
+---
+
 ## 🛡️ Demo Showcase: Config & Policy Rule Builder
 
 This starter repository includes a complete, production-grade DevOps **Policy Rule Builder**:
