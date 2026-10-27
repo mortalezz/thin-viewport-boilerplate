@@ -22,7 +22,8 @@ from fastapi.templating import Jinja2Templates
 from policy_engine import compile_policy_plan, search_policies
 
 BASE_DIR = Path(__file__).resolve().parent
-DIST_DIR = BASE_DIR.parent / "dist"
+DIST_DIR = BASE_DIR / "dist" if (BASE_DIR / "dist").exists() else BASE_DIR.parent / "dist"
+INDEX_HTML_PATH = DIST_DIR / "index.html"
 TEMPLATES_DIR = BASE_DIR / "templates"
 
 app = FastAPI(title="Thin Viewport & Stateless Cookie Boilerplate")
@@ -33,6 +34,11 @@ if (DIST_DIR / "assets").exists():
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 # --- Cache Guardrails & Cookie Codec ---
+EDGE_CACHE_HEADERS = {
+    "Cache-Control": "public, max-age=3600, s-maxage=86400, stale-while-revalidate=86400",
+    "Vary": "Accept-Encoding",
+}
+
 NO_CACHE_HEADERS = {
     "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
     "Pragma": "no-cache",
@@ -100,8 +106,11 @@ async def health_check():
     """Zero-allocation keep-warm and healthcheck endpoint."""
     return {"status": "ok"}
 
-@app.get("/", response_class=HTMLResponse)
+@app.api_route("/", methods=["GET", "HEAD"], response_class=HTMLResponse)
+@app.api_route("/index.html", methods=["GET", "HEAD"], response_class=HTMLResponse)
 async def get_index(request: Request):
+    if INDEX_HTML_PATH.exists():
+        return HTMLResponse(content=INDEX_HTML_PATH.read_text(encoding="utf-8"), headers=EDGE_CACHE_HEADERS)
     raw_cookie = request.cookies.get(COOKIE_NAME)
     policies = decode_policy_cookie(raw_cookie)
     plan = compile_policy_plan(policies)
