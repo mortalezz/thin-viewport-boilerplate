@@ -95,6 +95,11 @@ def render_workspace_response(request: Request, policies: list[str], refresh_sea
 
 # --- HTTP Endpoints ---
 
+@app.get("/api/health")
+async def health_check():
+    """Zero-allocation keep-warm and healthcheck endpoint."""
+    return {"status": "ok"}
+
 @app.get("/", response_class=HTMLResponse)
 async def get_index(request: Request):
     raw_cookie = request.cookies.get(COOKIE_NAME)
